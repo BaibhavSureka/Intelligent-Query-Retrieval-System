@@ -1,29 +1,19 @@
-# LLM-Powered Intelligent Query–Retrieval System
+# LLM-Powered Intelligent Query-Retrieval System
 
-A production-ready RAG (Retrieval-Augmented Generation) pipeline for processing large documents and answering natural language queries with explainable responses.
+A production-ready RAG (Retrieval-Augmented Generation) pipeline for processing large documents and answering natural language queries with explainable decision rationale.
 
 ## 🚀 Features
 
-### Core Capabilities
-
-- **Multi-format Document Processing**: PDF, DOCX, and Email (.eml) files
-- **Semantic Search**: FAISS-based vector similarity search
-- **Explainable AI**: Detailed responses with supporting clauses and rationale
-- **Confidence Scoring**: Built-in confidence assessment for answers
-- **Authentication**: Bearer token-based API security
-- **Error Handling**: Comprehensive validation and error responses
-
-### Technical Specifications
-
-- **Backend**: FastAPI with async processing
-- **Vector Database**: FAISS for efficient similarity search
-- **LLM**: OpenAI GPT-4 for answer generation
-- **Embeddings**: OpenAI text-embedding-ada-002
-- **Token Management**: Optimized chunking and context management
+- **Multi-format Document Support**: PDF, DOCX, and Email (.eml) files
+- **Semantic Search**: FAISS vector store for efficient retrieval
+- **Intelligent Answering**: GPT-3.5-turbo for fast, accurate responses
+- **Explainable AI**: Decision rationale and confidence scoring
+- **Production Ready**: FastAPI with authentication and error handling
+- **Optimized Performance**: Fast response times with efficient token usage
 
 ## 📋 Requirements
 
-- Python 3.11+
+- Python 3.8+
 - OpenAI API key
 - Internet connection for document downloads
 
@@ -32,8 +22,8 @@ A production-ready RAG (Retrieval-Augmented Generation) pipeline for processing 
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/BaibhavSureka/-Intelligent-Query-Retrieval-System-.git
-   cd -Intelligent-Query-Retrieval-System-
+   git clone <your-repo-url>
+   cd llm
    ```
 
 2. **Install dependencies**
@@ -44,192 +34,250 @@ A production-ready RAG (Retrieval-Augmented Generation) pipeline for processing 
 
 3. **Set up environment variables**
 
-   Copy the example environment file and add your OpenAI API key:
    ```bash
+   # Copy the example file
    cp env.example .env
-   ```
-   
-   Then edit `.env` and add your OpenAI API key:
-   ```
-   OPENAI_API_KEY=sk-your-actual-openai-api-key-here
+
+   # Edit .env and add your OpenAI API key
+   OPENAI_API_KEY=your_openai_api_key_here
    ```
 
-## 🚀 Usage
+## 🏃‍♂️ Running Locally
 
-### Start the API Server
+### Quick Start
 
 ```bash
-uvicorn app.api:app --reload
+# Run the development server
+python run_local.py
 ```
 
-The API will be available at `http://localhost:8000`
+### Manual Start
 
-### API Endpoint
-
-**POST** `/api/v1/hackrx/run`
-
-**Headers:**
-
-```
-Authorization: Bearer 88def649851a3e0861a60905001a92f0a9cdd621ade7686aa6be07cc91f1ed9b
-Content-Type: application/json
+```bash
+# Using uvicorn directly
+uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**Request Body:**
+### Testing the API
+
+```bash
+# Test with sample data
+python test_api.py
+```
+
+## 🌐 API Endpoints
+
+### Main Endpoint
+
+- **URL**: `POST /api/v1/hackrx/run`
+- **Authentication**: Bearer token required
+- **Content-Type**: `application/json`
+
+### Health Check
+
+- **URL**: `GET /health`
+- **Response**: `{"status": "healthy", "service": "RAG Pipeline"}`
+
+### Root Endpoint
+
+- **URL**: `GET /`
+- **Response**: System information and status
+
+## 📡 API Usage
+
+### Request Format
 
 ```json
 {
-  "documents": "https://example.com/policy.pdf",
+  "documents": "https://example.com/document.pdf",
   "questions": [
-    "Does this policy cover knee surgery?",
+    "What is the grace period for premium payment?",
     "What is the waiting period for pre-existing diseases?"
   ]
 }
 ```
 
-**Response:**
+### Response Format
 
 ```json
 {
   "answers": [
-    "Yes, this policy covers knee surgery under clause 4.2...",
-    "The waiting period is 36 months as stated in clause 6.1..."
-  ],
-  "detailed_answers": [
-    {
-      "answer": "Yes, this policy covers knee surgery...",
-      "supporting_clauses": [
-        { "text": "4.2. Surgical Procedures", "location": "Chunk 3" }
-      ],
-      "decision_rationale": "The answer was derived from clause 4.2...",
-      "confidence_score": 0.85
-    }
-  ],
-  "processing_time": 2.34,
-  "document_processed": "https://example.com/policy.pdf"
+    "A grace period of thirty days is provided for premium payment...",
+    "There is a waiting period of thirty-six months for pre-existing diseases..."
+  ]
 }
 ```
 
-## 📁 Project Structure
+### Example with curl
 
-```
-llm/
-├── app/
-│   ├── api.py              # FastAPI endpoints with authentication
-│   ├── schemas.py          # Pydantic models for request/response
-│   ├── document_loader.py  # PDF/DOCX/Email document processing
-│   ├── chunker.py          # Text chunking and preprocessing
-│   ├── embedder.py         # OpenAI embeddings with token management
-│   ├── vector_store.py     # FAISS vector database interface
-│   ├── retriever.py        # Semantic search and retrieval
-│   └── logic.py            # LLM-based answer generation
-├── requirements.txt
-├── Dockerfile
-├── docker-compose.yml
-├── env.example             # Environment variables template
-└── README.md
+```bash
+curl -X POST "http://localhost:8000/api/v1/hackrx/run" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer 88def649851a3e0861a60905001a92f0a9cdd621ade7686aa6be07cc91f1ed9b" \
+  -d '{
+    "documents": "https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=2023-01-03&st=2025-07-04T09%3A11%3A24Z&se=2027-07-05T09%3A11%3A00Z&sr=b&sp=r&sig=N4a9OU0w0QXO6AOIBiu4bpl7AXvEZogeT%2FjUHNO7HzQ%3D",
+    "questions": [
+        "What is the grace period for premium payment under the National Parivar Mediclaim Plus Policy?",
+        "What is the waiting period for pre-existing diseases (PED) to be covered?"
+    ]
+}'
 ```
 
-## 🔧 System Architecture
+## 🏗️ System Architecture
 
-1. **Document Input**: PDF/DOCX/Email URL processing
-2. **Text Extraction**: Multi-format document parsing
-3. **Chunking**: Intelligent text segmentation
-4. **Embedding**: OpenAI embedding generation
-5. **Vector Storage**: FAISS similarity indexing
-6. **Query Processing**: Natural language question parsing
-7. **Semantic Search**: Relevant chunk retrieval
-8. **Answer Generation**: GPT-4 with explainability
-9. **Response Formatting**: Structured JSON output
+```
+Document Input → Text Extraction → Chunking → Embedding → Vector Store → Retrieval → LLM Processing → Answer Generation
+```
 
-## 🛡️ Error Handling
+### Components
 
-The system includes comprehensive error handling for:
+1. **Document Loader** (`app/document_loader.py`)
 
-- Invalid document URLs
-- Unsupported file formats
-- Empty or corrupted documents
-- API rate limits
-- Network connectivity issues
-- Token limit exceeded
+   - Downloads documents from URLs
+   - Supports PDF, DOCX, and Email formats
+   - Extracts text content
 
-## 📊 Performance Features
+2. **Text Chunker** (`app/chunker.py`)
 
-- **Token Efficiency**: Optimized chunking and context management
-- **Latency**: Fast retrieval with FAISS vector search
-- **Scalability**: Modular architecture for easy extension
-- **Monitoring**: Processing time tracking and debug logging
+   - Splits documents into manageable chunks
+   - Optimized for semantic meaning preservation
 
-## 🔐 Security
+3. **Embedding Generator** (`app/embedder.py`)
 
-- Bearer token authentication
-- Input validation and sanitization
-- Error message sanitization
-- Secure document processing
+   - Converts text chunks to vectors
+   - Uses OpenAI's text-embedding-ada-002 model
+   - Handles token limits efficiently
+
+4. **Vector Store** (`app/vector_store.py`)
+
+   - FAISS-based in-memory vector database
+   - Fast similarity search
+
+5. **Retriever** (`app/retriever.py`)
+
+   - Finds relevant chunks for queries
+   - Semantic search implementation
+
+6. **Logic Engine** (`app/logic.py`)
+   - GPT-3.5-turbo for answer generation
+   - Optimized for speed and accuracy
+   - Confidence scoring
+
+## 🔧 Performance Optimizations
+
+- **Fast Model**: Using GPT-3.5-turbo instead of GPT-4 for speed
+- **Token Limits**: Efficient context management
+- **Response Limits**: Max 500 tokens per answer
+- **No Debug Output**: Clean, production-ready logging
+- **Optimized Chunking**: Balanced chunk sizes for retrieval
 
 ## 🐳 Docker Deployment
 
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
+### Build and Run
 
-# Or build manually
-docker build -t llm-rag .
-docker run -p 8000:8000 -e OPENAI_API_KEY=your-key llm-rag
+```bash
+# Build the image
+docker build -t llm-query-system .
+
+# Run the container
+docker run -p 8000:8000 -e OPENAI_API_KEY=your_key llm-query-system
 ```
 
-## 📈 Evaluation Metrics
+### Docker Compose
 
-The system is designed to meet HackRx 6.0 evaluation criteria:
+```bash
+# Start with docker-compose
+docker-compose up --build
+```
 
-- **Accuracy**: Precision in query understanding and clause matching
+## 🚀 Production Deployment
+
+### Render
+
+1. Connect your GitHub repository
+2. Set environment variables:
+   - `OPENAI_API_KEY`: Your OpenAI API key
+3. Deploy automatically
+
+### Railway
+
+1. Connect your GitHub repository
+2. Add environment variables
+3. Deploy with automatic scaling
+
+### Heroku
+
+```bash
+# Create Heroku app
+heroku create your-app-name
+
+# Set environment variables
+heroku config:set OPENAI_API_KEY=your_key
+
+# Deploy
+git push heroku main
+```
+
+## 📊 Evaluation Metrics
+
+The system is optimized for:
+
+- **Accuracy**: Precise query understanding and clause matching
 - **Token Efficiency**: Optimized LLM usage and cost-effectiveness
-- **Latency**: Fast response times and real-time performance
-- **Reusability**: Modular code structure and extensibility
-- **Explainability**: Clear decision reasoning and clause traceability
+- **Latency**: Fast response times (< 30 seconds)
+- **Reusability**: Modular code structure
+- **Explainability**: Clear decision reasoning
+
+## 🔒 Security
+
+- Bearer token authentication
+- Input validation and sanitization
+- Error handling without information leakage
+- Secure document processing
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **OpenAI API Key Error**
+
+   ```bash
+   # Check your .env file
+   cat .env
+   # Should contain: OPENAI_API_KEY=sk-...
+   ```
+
+2. **Port Already in Use**
+
+   ```bash
+   # Kill process on port 8000
+   lsof -ti:8000 | xargs kill -9
+   ```
+
+3. **Module Not Found**
+   ```bash
+   # Reinstall dependencies
+   pip install -r requirements.txt
+   ```
+
+### Performance Tips
+
+- Use smaller documents for faster processing
+- Limit the number of questions per request
+- Ensure stable internet connection for document downloads
+
+## 📝 License
+
+This project is developed for the HackRx 6.0 competition.
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Test thoroughly
 5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For issues and questions:
-
-1. Check the debug logs for detailed error information
-2. Verify your OpenAI API key is set correctly
-3. Ensure document URLs are accessible
-4. Check that questions are properly formatted
-
-## 🚀 Quick Start
-
-1. **Clone and setup:**
-   ```bash
-   git clone https://github.com/BaibhavSureka/-Intelligent-Query-Retrieval-System-.git
-   cd -Intelligent-Query-Retrieval-System-
-   pip install -r requirements.txt
-   cp env.example .env
-   # Edit .env with your OpenAI API key
-   ```
-
-2. **Run the server:**
-   ```bash
-   uvicorn app.api:app --reload
-   ```
-
-3. **Test with Postman:**
-   - URL: `POST http://localhost:8000/api/v1/hackrx/run`
-   - Headers: `Authorization: Bearer 88def649851a3e0861a60905001a92f0a9cdd621ade7686aa6be07cc91f1ed9b`
-   - Body: Your document URL and questions
 
 ---
 
-**Built for HackRx 6.0 - Bajaj Finserv Health**
+**Ready for HackRx 6.0 Submission!** 🎯

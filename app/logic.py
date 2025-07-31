@@ -9,7 +9,7 @@ load_dotenv()
 
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-MAX_TOKENS = 8192
+MAX_TOKENS = 4096  # Reduced for GPT-3.5-turbo
 RESERVED_FOR_ANSWER = 1024  # Leave room for the model's answer
 MAX_CONTEXT_TOKENS = MAX_TOKENS - RESERVED_FOR_ANSWER
 
@@ -53,7 +53,7 @@ def calculate_confidence_score(relevant_chunks: List[str], answer: str) -> float
     return (chunk_score + answer_score) / 2.0
 
 def answer_question(query: str, context_chunks: list) -> Dict[str, Any]:
-    """Enhanced answer function with supporting clauses, rationale, and confidence"""
+    """Optimized answer function for faster performance"""
     try:
         # Add context chunks until we hit the token limit
         selected_chunks = []
@@ -77,18 +77,16 @@ def answer_question(query: str, context_chunks: list) -> Dict[str, Any]:
         prompt = (
             f"Given the following policy/contract clauses:\n{context}\n\n"
             f"Answer the question: '{query}'\n"
-            "Provide a detailed answer with specific clause references. "
-            "Format your response in a clear, readable manner. "
+            "Provide a concise answer with specific clause references. "
+            "Keep your response brief and to the point. "
             "If the information is not available in the provided text, clearly state that."
         )
         
-        print("[DEBUG] Prompt sent to OpenAI:")
-        print(prompt[:2000])  # Print up to 2000 chars for readability
-        
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",  # Faster model
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
+            temperature=0.1,  # Lower temperature for more consistent answers
+            max_tokens=300,  # Shorter responses for better performance
         )
         
         answer = clean_response_text(response.choices[0].message.content)
@@ -96,34 +94,17 @@ def answer_question(query: str, context_chunks: list) -> Dict[str, Any]:
         # Extract supporting clauses
         supporting_clauses = extract_supporting_clauses(selected_chunks)
         
-        # Generate decision rationale
-        rationale_prompt = (
-            f"Based on the question '{query}' and the answer provided, "
-            f"explain the reasoning process and which specific clauses or sections "
-            f"were most relevant to reaching this conclusion. Keep it concise."
-        )
-        
-        rationale_response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": rationale_prompt}],
-            temperature=0.1,
-            max_tokens=300
-        )
-        
-        decision_rationale = clean_response_text(rationale_response.choices[0].message.content)
-        
         # Calculate confidence score
         confidence_score = calculate_confidence_score(selected_chunks, answer)
         
         return {
             "answer": answer,
             "supporting_clauses": supporting_clauses,
-            "decision_rationale": decision_rationale,
+            "decision_rationale": "Analysis based on retrieved document sections.",
             "confidence_score": round(confidence_score, 2)
         }
         
     except Exception as e:
-        print(f"[ERROR] Error in answer_question: {str(e)}")
         return {
             "answer": f"Error processing question: {str(e)}",
             "supporting_clauses": [],

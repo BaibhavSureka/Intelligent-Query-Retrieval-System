@@ -17,7 +17,3 @@ class Answer(BaseModel):
 
 class QueryResponse(BaseModel):
     answers: List[str]
-    # Enhanced response structure
-    detailed_answers: Optional[List[Answer]] = None
-    processing_time: Optional[float] = None
-    document_processed: Optional[str] = None

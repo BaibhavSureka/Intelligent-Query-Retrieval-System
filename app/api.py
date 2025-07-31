@@ -37,10 +37,21 @@ def validate_input(request: QueryRequest):
         if not question.strip():
             raise HTTPException(status_code=400, detail=f"Question {i+1} cannot be empty")
 
+@app.get("/")
+async def root():
+    return {
+        "message": "LLM-Powered Intelligent Query-Retrieval System",
+        "status": "running",
+        "endpoint": "/api/v1/hackrx/run",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "RAG Pipeline"}
+
 @app.post("/api/v1/hackrx/run", response_model=QueryResponse)
 async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
-    start_time = time.time()
-    
     try:
         # Validate input
         validate_input(request)
@@ -71,43 +82,21 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
         
         # 5. For each question, retrieve and answer
         answers = []
-        detailed_answers = []
         
         for q in request.questions:
             try:
                 relevant_chunks = retrieve_relevant_chunks(q, vector_store)
                 result = answer_question(q, relevant_chunks)
                 
-                # Extract simple answer for backward compatibility
+                # Extract only the answer text for HackRx format
                 answers.append(result["answer"])
-                
-                # Create detailed answer object
-                detailed_answer = Answer(
-                    answer=result["answer"],
-                    supporting_clauses=result["supporting_clauses"],
-                    decision_rationale=result["decision_rationale"],
-                    confidence_score=result["confidence_score"]
-                )
-                detailed_answers.append(detailed_answer)
                 
             except Exception as e:
                 error_msg = f"Error processing question: {str(e)}"
                 answers.append(error_msg)
-                detailed_answers.append(Answer(
-                    answer=error_msg,
-                    supporting_clauses=[],
-                    decision_rationale="An error occurred during processing",
-                    confidence_score=0.0
-                ))
         
-        processing_time = round(time.time() - start_time, 2)
-        
-        return QueryResponse(
-            answers=answers,
-            detailed_answers=detailed_answers,
-            processing_time=processing_time,
-            document_processed=request.documents
-        )
+        # Return only the answers array as expected by HackRx
+        return {"answers": answers}
         
     except HTTPException:
         raise
