@@ -8,8 +8,16 @@ from .retriever import retrieve_relevant_chunks
 from .logic import answer_question
 import time
 from typing import List
+import hashlib
 
 app = FastAPI()
+
+# Simple in-memory cache for embeddings
+embedding_cache = {}
+
+def get_cache_key(text: str) -> str:
+    """Generate cache key for text"""
+    return hashlib.md5(text.encode()).hexdigest()
 
 async def verify_token(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -41,9 +49,12 @@ def validate_input(request: QueryRequest):
 async def root():
     return {
         "message": "LLM-Powered Intelligent Query-Retrieval System",
+        "description": "Universal document analysis and question answering system",
         "status": "running",
         "endpoint": "/api/v1/hackrx/run",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "supported_formats": ["PDF", "DOCX", "Email"],
+        "document_types": ["Legal", "Technical", "Academic", "Business", "Medical", "Any text-based document"]
     }
 
 @app.get("/health")
@@ -52,6 +63,8 @@ async def health_check():
 
 @app.post("/api/v1/hackrx/run", response_model=QueryResponse)
 async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
+    start_time = time.time()
+    
     try:
         # Validate input
         validate_input(request)
@@ -69,9 +82,17 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
         if not chunks:
             raise HTTPException(status_code=400, detail="No meaningful content could be extracted from the document")
         
-        # 3. Embed chunks
+        # 3. Embed chunks (with caching)
         try:
-            embeddings = embed_chunks(chunks)
+            # Check cache first
+            cache_key = get_cache_key(text)
+            if cache_key in embedding_cache:
+                embeddings = embedding_cache[cache_key]
+            else:
+                embeddings = embed_chunks(chunks)
+                # Cache the embeddings (limit cache size)
+                if len(embedding_cache) < 10:  # Keep only 10 cached documents
+                    embedding_cache[cache_key] = embeddings
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error generating embeddings: {str(e)}")
         
@@ -88,8 +109,13 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
                 relevant_chunks = retrieve_relevant_chunks(q, vector_store)
                 result = answer_question(q, relevant_chunks)
                 
-                # Extract only the answer text for HackRx format
-                answers.append(result["answer"])
+                # Extract only the answer text for HackRx format and clean it
+                answer = result["answer"]
+                # Ensure clean response - remove any trailing characters
+                answer = answer.strip()
+                while answer.endswith(('/', '\\', '|', '-', ' ')):
+                    answer = answer.rstrip('/').rstrip('\\').rstrip('|').rstrip('-').rstrip()
+                answers.append(answer)
                 
             except Exception as e:
                 error_msg = f"Error processing question: {str(e)}"

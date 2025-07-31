@@ -35,12 +35,30 @@ def get_embedding(text: str, model="text-embedding-ada-002"):
     return response.data[0].embedding
 
 def embed_chunks(chunks: list) -> list:
+    """Embed chunks with batch processing for better performance"""
     embedded = []
-    for chunk in chunks:
-        if num_tokens(chunk) <= MAX_TOKENS:
-            embedded.append(get_embedding(chunk))
-        else:
-            subchunks = split_chunk(chunk)
-            for subchunk in subchunks:
-                embedded.append(get_embedding(subchunk))
+    
+    # Process in batches for better performance
+    batch_size = 10
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i + batch_size]
+        batch_texts = []
+        
+        for chunk in batch:
+            if num_tokens(chunk) <= MAX_TOKENS:
+                batch_texts.append(chunk)
+            else:
+                subchunks = split_chunk(chunk)
+                batch_texts.extend(subchunks)
+        
+        # Batch embed for efficiency
+        if batch_texts:
+            try:
+                response = client.embeddings.create(input=batch_texts, model="text-embedding-ada-002")
+                embedded.extend([data.embedding for data in response.data])
+            except Exception as e:
+                # Fallback to individual embedding if batch fails
+                for text in batch_texts:
+                    embedded.append(get_embedding(text))
+    
     return embedded

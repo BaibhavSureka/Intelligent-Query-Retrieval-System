@@ -8,7 +8,7 @@ def num_tokens(text: str) -> int:
     """Count tokens in text"""
     return len(tokenizer.encode(text))
 
-def chunk_text(text: str, max_tokens: int = 500) -> list:
+def chunk_text(text: str, max_tokens: int = 800) -> list:
     """Split text into chunks based on token count for better embedding performance"""
     # Split by paragraphs first
     paras = [p.strip() for p in re.split(r'\n+', text) if p.strip()]
@@ -39,7 +39,7 @@ def chunk_text(text: str, max_tokens: int = 500) -> list:
     
     return chunks
 
-def chunk_text_by_characters(text: str, max_length: int = 500) -> list:
+def chunk_text_by_characters(text: str, max_length: int = 1000) -> list:
     """Split text into chunks based on character count (legacy method)"""
     # Split by single newlines, then merge to max_length
     paras = [p.strip() for p in re.split(r'\n+', text) if p.strip()]
