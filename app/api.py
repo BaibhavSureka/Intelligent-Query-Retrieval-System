@@ -7,6 +7,7 @@ from .vector_store import VectorStore
 from .retriever import retrieve_relevant_chunks
 from .logic import answer_question
 import time
+import re
 from typing import List
 import hashlib
 import json
@@ -92,10 +93,12 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error loading document: {str(e)}")
         
-        # 2. Chunk text
-        chunks = chunk_text(text)
+        # 2. Chunk text with speed-optimized parameters
+        print(f"Document loaded: {len(text)} characters")
+        chunks = chunk_text(text, max_tokens=350, overlap_tokens=50, use_sentence_windows=False)  # Speed-optimized chunking
         if not chunks:
             raise HTTPException(status_code=400, detail="No meaningful content could be extracted from the document")
+        print(f"Created {len(chunks)} speed-optimized chunks")
         
         # 3. Embed chunks (with caching)
         try:
@@ -103,36 +106,65 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
             cache_key = get_cache_key(text)
             if cache_key in embedding_cache:
                 embeddings = embedding_cache[cache_key]
+                print("Using cached embeddings")
             else:
+                print("Generating new embeddings...")
                 embeddings = embed_chunks(chunks)
+                print(f"Generated {len(embeddings)} embeddings")
                 # Cache the embeddings (limit cache size)
                 if len(embedding_cache) < 10:  # Keep only 10 cached documents
                     embedding_cache[cache_key] = embeddings
         except Exception as e:
+            print(f"Embedding error: {e}")
             raise HTTPException(status_code=500, detail=f"Error generating embeddings: {str(e)}")
         
         # 4. Build vector store
+        if not embeddings:
+            raise HTTPException(status_code=500, detail="No embeddings were generated")
+        
         dim = len(embeddings[0])
         vector_store = VectorStore(dim)
         vector_store.add(embeddings, chunks)
+        print(f"Vector store built with {len(chunks)} chunks, dimension {dim}")
+        stats = vector_store.get_stats()
+        print(f"Vector store stats: {stats}")
         
         # 5. For each question, retrieve and answer
         answers = []
         
-        for q in request.questions:
+        for i, q in enumerate(request.questions):
+            print(f"Processing question {i+1}: {q}")
             try:
-                relevant_chunks = retrieve_relevant_chunks(q, vector_store)
-                result = answer_question(q, relevant_chunks)
+                relevant_chunks = retrieve_relevant_chunks(q, vector_store, top_k=15)
+                if not relevant_chunks:
+                    print(f"No relevant chunks found for question {i+1}")
+                    answers.append("No relevant information found in the document to answer this question.")
+                    continue
+                
+                result = answer_question(q, relevant_chunks, document_text=text)
                 
                 # Extract only the answer text for HackRx format and clean it
                 answer = result["answer"]
                 # Ensure clean response - remove any trailing characters
                 answer = answer.strip()
-                while answer.endswith(('/', '\\', '|', '-', ' ')):
-                    answer = answer.rstrip('/').rstrip('\\').rstrip('|').rstrip('-').rstrip()
+                while answer.endswith(('/', '\\', '|', '-', ' ', '.')):
+                    answer = answer.rstrip('/').rstrip('\\').rstrip('|').rstrip('-').rstrip().rstrip('.')
+                
+                # Remove any incomplete sentences at the end
+                if answer and not answer.endswith(('.', '!', '?', '%', 'days', 'months', 'years', 'coverage')):
+                    # Find the last complete sentence
+                    sentences = re.split(r'[.!?]+', answer)
+                    if len(sentences) > 1 and sentences[-1].strip():
+                        # If the last part seems incomplete, remove it
+                        complete_sentences = sentences[:-1]
+                        if complete_sentences:
+                            answer = '.'.join(complete_sentences) + '.'
+                
+                print(f"Answer {i+1}: {answer[:100]}...")
                 answers.append(answer)
                 
             except Exception as e:
+                print(f"Error processing question {i+1}: {e}")
                 error_msg = f"Error processing question: {str(e)}"
                 answers.append(error_msg)
         
