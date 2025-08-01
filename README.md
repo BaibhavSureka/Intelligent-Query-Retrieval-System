@@ -49,6 +49,7 @@ A production-ready RAG (Retrieval-Augmented Generation) pipeline for processing 
 ```bash
 # Run the development server
 uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.api:app --reload
 ```
 
 ## ☁️ Deployment

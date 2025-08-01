@@ -9,15 +9,22 @@ from .logic import answer_question
 import time
 from typing import List
 import hashlib
+import json
 
 app = FastAPI()
 
-# Simple in-memory cache for embeddings
+# Enhanced caching for embeddings and responses
 embedding_cache = {}
+response_cache = {}
 
 def get_cache_key(text: str) -> str:
     """Generate cache key for text"""
     return hashlib.md5(text.encode()).hexdigest()
+
+def get_response_cache_key(doc_url: str, questions: List[str]) -> str:
+    """Generate cache key for response"""
+    cache_data = doc_url + "|" + "|".join(sorted(questions))
+    return hashlib.md5(cache_data.encode()).hexdigest()
 
 async def verify_token(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -68,6 +75,14 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
     try:
         # Validate input
         validate_input(request)
+        
+        # Check response cache first
+        response_cache_key = get_response_cache_key(request.documents, request.questions)
+        if response_cache_key in response_cache:
+            cached_response = response_cache[response_cache_key]
+            # Check if cache is not too old (1 hour)
+            if time.time() - cached_response.get("timestamp", 0) < 3600:
+                return {"answers": cached_response["answers"]}
         
         # 1. Load and parse document
         try:
@@ -120,6 +135,17 @@ async def run_query(request: QueryRequest, token: str = Depends(verify_token)):
             except Exception as e:
                 error_msg = f"Error processing question: {str(e)}"
                 answers.append(error_msg)
+        
+        # Cache the response
+        response_cache[response_cache_key] = {
+            "answers": answers,
+            "timestamp": time.time()
+        }
+        
+        # Clean up old cache entries (keep only 20 responses)
+        if len(response_cache) > 20:
+            oldest_key = min(response_cache.keys(), key=lambda k: response_cache[k]["timestamp"])
+            del response_cache[oldest_key]
         
         # Return only the answers array as expected by HackRx
         return {"answers": answers}
