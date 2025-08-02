@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python main.py"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+[variables]
+PYTHONPATH = "/app"
+PORT = "8000"
+
+[networking]
+serviceDomain = "llm-query-system"

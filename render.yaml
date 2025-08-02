@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: llm-query-system
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+      - key: PORT
+        value: 8000
+      - key: OPENAI_API_KEY
+        sync: false  # Set this in Render dashboard
+    disk:
+      name: vector-storage
+      mountPath: /opt/render/project/src/faiss_index
+      sizeGB: 1
